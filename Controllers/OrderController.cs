@@ -37,18 +37,16 @@ namespace PetStore.Controllers
             try
             {
                 var order = _order.GetOrderById(id);
+                if (!(id >= 1 && id <= 10))
+                {
+                    return BadRequest();
+                }
                 if (order == null)
                 {
                     return NotFound();
                 }
-                if (id >= 1 && id < 10)
-                {
-                    return order;
-                }
-                else
-                {
-                    return BadRequest();
-                }
+
+                return order;
             }
             catch (Exception e)
             {
