@@ -6,12 +6,16 @@ namespace PetStore.Domain
     public interface IPet
     {
         Models.Pet SetPet(Models.Pet pet);
+        List<Models.Pet> GetAll();
         Models.Pet GetPetById(long id);
         List<Models.Pet> GetPets(string? status);
         List<Models.Pet> GetPetsByTag(string? tag);
         Models.Pet UpdatePet(long id, Models.Pet pet);
         Models.Pet DeletePet(Models.Pet pet);
-        int GetPetStatusInt(string status);
+        int GetPetStatusInt(string status); 
+        List<Models.Pet> GetAvailablePets();
+        List<Models.Pet> GetPendingPets();
+        List<Models.Pet> GetSoldPets();
     }
 
     public class Pet : IPet
@@ -48,6 +52,11 @@ namespace PetStore.Domain
                 Tags = TagsList2,
             },
         };
+
+       public List<Models.Pet> GetAll()
+       {
+           return _pets;
+       }
 
     public Models.Pet SetPet(Models.Pet pet)
         {
@@ -128,6 +137,24 @@ namespace PetStore.Domain
                 "sold" => 3,
                 _ => 0
             };
+        }
+
+        public List<Models.Pet> GetAvailablePets()
+        {
+            var availablePets = _pets.FindAll(p => p.Status == PetStatuses.Available);
+            return availablePets;
+        }
+        
+        public List<Models.Pet> GetPendingPets()
+        {
+            var pendingPets = _pets.FindAll(p => p.Status == PetStatuses.Pending);
+            return pendingPets;
+        }
+        
+        public List<Models.Pet> GetSoldPets()
+        {
+            var soldPets = _pets.FindAll(p => p.Status == PetStatuses.Sold);
+            return soldPets;
         }
     }
 }

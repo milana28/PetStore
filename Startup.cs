@@ -23,6 +23,7 @@ namespace PetStore
             services.AddControllers();
             services.AddSingleton<IPet, Pet>();
             services.AddSingleton<IOrder, Order>();
+            services.AddSingleton<IInventory, Inventory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
