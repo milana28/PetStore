@@ -26,7 +26,7 @@ namespace PetStore.Controllers
         }
         
         [HttpGet]
-        public ActionResult<List<Models.Pet>> GetPets([FromQuery(Name = "status")] string? status, string? tag)
+        public ActionResult<List<Models.Pet>> GetPets([FromQuery(Name = "status")] string? status, [FromQuery(Name = "tags")]string? tag)
         {
             if (tag != null)
             {
