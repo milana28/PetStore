@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PetStore.Domain;
 using PetStore.Models;
 
@@ -13,10 +14,12 @@ namespace PetStore.Controllers
     {
 
         private readonly IPet _pet;
+        private readonly ILogger<PetController> _logger;
 
-        public PetController(IPet pet)
+        public PetController(IPet pet, ILogger<PetController> logger)
         {
             _pet = pet;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -57,26 +60,24 @@ namespace PetStore.Controllers
         [HttpPut("{id}")]
         public ActionResult<Models.Pet> UpdatePet(long id, Models.Pet updatedPet)
         {
-            var pet = _pet.GetPetById(id);
-            if (updatedPet.Id != id)
-            {
-                return BadRequest();
-            }
-            
             try
             {
-                return _pet.UpdatePet(id, updatedPet);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
+                var pet = _pet.GetPetById(id);
+                if (updatedPet.Id != id)
+                {
+                    return BadRequest();
+                }
                 if (pet == null)
                 {
                     return NotFound();
                 }
-                else
-                {
-                    throw;
-                }
+                
+                return _pet.UpdatePet(id, updatedPet);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error", e);
+                throw;
             }
         }
 

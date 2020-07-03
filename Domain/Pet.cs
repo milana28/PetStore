@@ -94,7 +94,7 @@ namespace PetStore.Domain
             {
                 foreach (var splittedTag in splittedTags)
                 {
-                    GetTags(splittedTag).ForEach(t =>  petList.Add(_pets.Find(p => p.Tags.Contains(t))));
+                    GetTags(splittedTag).ForEach(t => petList.Add(_pets.Find(p => p.Tags.Contains(t))));
                 }
             }
 
