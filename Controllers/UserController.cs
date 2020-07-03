@@ -35,8 +35,8 @@ namespace PetStore.Controllers
 
             return user;
         }
-
-        [HttpPut("{username")]
+        
+        [HttpPut("{username}")]
         public ActionResult<Models.User> UpdateUser(string username, Models.User updatedUser)
         {
             try

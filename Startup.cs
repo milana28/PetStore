@@ -25,6 +25,16 @@ namespace PetStore
             services.AddSingleton<IOrder, Order>();
             services.AddSingleton<IInventory, Inventory>();
             services.AddSingleton<IUser, User>();
+            // services.AddRazorPages()
+            //     .AddMvcOptions(options =>
+            //     {
+            //         options.MaxModelValidationErrors = 50;
+            //         options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
+            //             _ => "The field is required.");
+            //     });
+
+            // services.AddSingleton<IValidationAttributeAdapterProvider,
+            //     CustomValidationAttributeAdapterProvider>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

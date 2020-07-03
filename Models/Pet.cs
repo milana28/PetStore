@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace PetStore.Models
 {
     public class Pet
     {
+        [Required]
         public long Id { get; set; }
+        
         public Category Category { get; set; }
         public string Name { get; set; }
         public PetStatuses Status { get; set; }
