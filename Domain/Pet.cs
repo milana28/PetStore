@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PetStore.Models;
 
 namespace PetStore.Domain
@@ -82,25 +83,41 @@ namespace PetStore.Domain
 
         private List<Models.Pet> GetPetByTag(string tag)
         {
-            List<Tag> tags = new List<Tag>();
+            IEnumerable<string> splittedTags = tag.Split(",");
             List<Models.Pet> petList = new List<Models.Pet>();
-            
-             _pets.ForEach(p =>
-             {
-                 p.Tags.ForEach(t =>
-                 {
-                     if (t.Name == tag)
-                     {
-                         tags.Add(t);
-                     }
-                 });
-             });
-             
-             tags.ForEach(t =>  petList = _pets.FindAll(p => p.Tags.Contains(t)));
 
-             return petList;
+            if (splittedTags.Count() == 1)
+            {
+                GetTags(tag).ForEach(t =>  petList.Add(_pets.Find(p => p.Tags.Contains(t))));
+            }
+            else
+            {
+                foreach (var splittedTag in splittedTags)
+                {
+                    GetTags(splittedTag).ForEach(t =>  petList.Add(_pets.Find(p => p.Tags.Contains(t))));
+                }
+            }
+
+            return petList;
         }
-        
+
+        private List<Tag> GetTags(string tag)
+        {
+            List<Tag> tags = new List<Tag>();
+            _pets.ForEach(p =>
+            {
+                p.Tags.ForEach(t =>
+                {
+                    if (t.Name == tag)
+                    {
+                        tags.Add(t);
+                    }
+                });
+            });
+
+            return tags;
+        }
+
         public List<Models.Pet> GetPets(string? status)
         {
             return status == null ? _pets : GetPetByStatus(status);
