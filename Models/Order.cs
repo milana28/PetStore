@@ -4,10 +4,8 @@ namespace PetStore.Models
 {
     public class Order
     {
-        [Required]
         public long Id { get; set; }
         
-        [Required]
         public long PetId { get; set; }
         
         public int Quantity { get; set; }

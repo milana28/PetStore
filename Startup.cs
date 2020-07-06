@@ -25,29 +25,29 @@ namespace PetStore
             services.AddSingleton<IOrder, Order>();
             services.AddSingleton<IInventory, Inventory>();
             services.AddSingleton<IUser, User>();
-            // services.AddRazorPages()
-            //     .AddMvcOptions(options =>
-            //     {
-            //         options.MaxModelValidationErrors = 50;
-            //         options.ModelBindingMessageProvider.SetValueMustNotBeNullAccessor(
-            //             _ => "The field is required.");
-            //     });
-
-            // services.AddSingleton<IValidationAttributeAdapterProvider,
-            //     CustomValidationAttributeAdapterProvider>();
+            services.AddSwaggerGen();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Pet store");
+            });
+            
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
 
             app.UseHttpsRedirection();
+            
+            app.UseStaticFiles();
 
             app.UseRouting();
+            
 
             app.UseAuthorization();
 

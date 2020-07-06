@@ -5,12 +5,16 @@ namespace PetStore.Models
 {
     public class Pet
     {
-        [Required]
         public long Id { get; set; }
         
         public Category Category { get; set; }
+        
+        [Required]
         public string Name { get; set; }
+        
+        [Required]
         public PetStatuses Status { get; set; }
+        
         public List<Tag> Tags { get; set; }
         public List<string> PhotoUrls { get; set; }
     }

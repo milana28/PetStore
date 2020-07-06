@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PetStore.Domain;
@@ -20,19 +21,27 @@ namespace PetStore.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status405MethodNotAllowed)]
         public ActionResult<Models.Order> AddOrder(Models.Order order)
         {
             return _order.SetOrder(order);
         }
 
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public ActionResult<List<Models.Order>> GetOrder()
         {
             return _order.GetOrders();
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Models.Order> GetById(long id)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<Models.Order> GetOrderById(long id)
         {
             try
             {
@@ -56,6 +65,9 @@ namespace PetStore.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Models.Order> DeleteOrder(long id)
         {
             var order = _order.GetOrderById(id);
