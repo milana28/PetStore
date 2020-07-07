@@ -19,7 +19,7 @@ namespace PetStore.Domain
             new Models.Order()
             {
                 Id = 1,
-                PetId = 1,
+                PetGuid = "someGuid",
                 Quantity = 1,
                 ShipDate = "2020-07-01T13:19:11.456Z",
                 Status = OrderStatuses.Approved,

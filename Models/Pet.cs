@@ -1,12 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace PetStore.Models
 {
     public class Pet
     {
-        public long Id { get; set; }
-        
+        public Guid Guid { get; set; } = Guid.NewGuid();
         public Category Category { get; set; }
         
         [Required]

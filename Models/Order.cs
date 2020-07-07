@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace PetStore.Models
@@ -5,9 +6,7 @@ namespace PetStore.Models
     public class Order
     {
         public long Id { get; set; }
-        
-        public long PetId { get; set; }
-        
+        public string PetGuid { get; set; }
         public int Quantity { get; set; }
         public string ShipDate { get; set; }
         public OrderStatuses Status { get; set; }

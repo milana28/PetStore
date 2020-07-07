@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
+using PetStore.Controllers;
 using PetStore.Models;
 
 namespace PetStore.Domain
@@ -8,10 +12,10 @@ namespace PetStore.Domain
     {
         Models.Pet SetPet(Models.Pet pet);
         List<Models.Pet> GetAll();
-        Models.Pet GetPetById(long id);
+        Models.Pet GetPetByGuid(Guid guid);
         List<Models.Pet> GetPets(string? status);
         List<Models.Pet> GetPetsByTag(string? tag);
-        Models.Pet UpdatePet(long id, Models.Pet pet);
+        Models.Pet UpdatePet(Guid guid, Models.Pet pet);
         Models.Pet DeletePet(Models.Pet pet);
         int GetPetStatusInt(string status); 
         List<Models.Pet> GetAvailablePets();
@@ -23,22 +27,21 @@ namespace PetStore.Domain
     {
         private static readonly List<Tag> TagsList = new List<Tag>()
         {
-            new Tag() {Id = 0, Name = "tag1"},
-            new Tag() {Id = 1, Name = "tag2"},
-            new Tag() {Id = 2, Name = "tag3"}
+            new Tag() {Name = "tag1"},
+            new Tag() {Name = "tag2"},
+            new Tag() {Name = "tag3"}
         };
         private static readonly List<Tag> TagsList2 = new List<Tag>()
         {
-            new Tag() {Id = 0, Name = "tag4"},
+            new Tag() {Name = "tag4"},
         };
 
-        private static readonly Category Category = new Category() {Id = 0, Name = "Category 1"};
+        private static readonly Category Category = new Category() {Name = "Category 1"};
 
        private readonly List<Models.Pet> _pets = new List<Models.Pet>()
         {
             new Models.Pet()
             {
-                Id = 0,
                 Category = Category,
                 Name = "Dog",
                 Status = PetStatuses.Available,
@@ -46,7 +49,6 @@ namespace PetStore.Domain
             },
             new Models.Pet()
             {
-                Id = 1,
                 Category = Category,
                 Name = "Cat",
                 Status = PetStatuses.Available,
@@ -65,9 +67,9 @@ namespace PetStore.Domain
             return pet;
         }
 
-        public Models.Pet GetPetById(long id)
+        public Models.Pet GetPetByGuid(Guid guid)
         {
-            return _pets.Find(pet => pet.Id == id);
+            return _pets.Find(pet => pet.Guid == guid);
         }
         
         private List<Models.Pet> GetPetByStatus(string status)
@@ -134,9 +136,9 @@ namespace PetStore.Domain
             return pet;
         }
 
-        public Models.Pet UpdatePet(long id, Models.Pet pet)
+        public Models.Pet UpdatePet(Guid guid, Models.Pet pet)
         {
-            var index = _pets.FindIndex(p => p.Id == id);
+            var index = _pets.FindIndex(p => p.Guid == guid);
             if (index != -1)
             { 
                 _pets[index] = pet;

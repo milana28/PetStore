@@ -1,10 +1,11 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace PetStore.Models
 {
     public class User
     {
-        public long Id { get; set; }
+        public Guid Guid { get; set; } = Guid.NewGuid();
         
         [Required]
         [StringLength(30, ErrorMessage = "Username length can't be more than 30.")]
