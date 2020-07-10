@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
-using Microsoft.AspNetCore.Http;
-using PetStore.Controllers;
+using System.Runtime.CompilerServices;
+using Dapper;
+using Microsoft.EntityFrameworkCore;
 using PetStore.Models;
 
 namespace PetStore.Domain
@@ -25,43 +27,66 @@ namespace PetStore.Domain
 
     public class Pet : IPet
     {
-        private static readonly List<Tag> TagsList = new List<Tag>()
-        {
-            new Tag() {Name = "tag1"},
-            new Tag() {Name = "tag2"},
-            new Tag() {Name = "tag3"}
-        };
-        private static readonly List<Tag> TagsList2 = new List<Tag>()
-        {
-            new Tag() {Name = "tag4"},
-        };
-
-        private static readonly Category Category = new Category() {Name = "Category 1"};
-
-       private readonly List<Models.Pet> _pets = new List<Models.Pet>()
-        {
-            new Models.Pet()
-            {
-                Category = Category,
-                Name = "Dog",
-                Status = PetStatuses.Available,
-                Tags = TagsList,
-            },
-            new Models.Pet()
-            {
-                Category = Category,
-                Name = "Cat",
-                Status = PetStatuses.Available,
-                Tags = TagsList2,
-            },
-        };
-
-       public List<Models.Pet> GetAll()
+        private List<Models.Pet> _pets = new List<Models.Pet>();
+        private List<PetDAO> _petsDaoCategory = new List<PetDAO>();
+        private List<PetDAO> _petsDaoTags = new List<PetDAO>();
+        private readonly string databaseConnectionString = "Server=localhost;Database=petstore;User Id=sa;Password=yourStrong(!)Password;";
+    
+    public List<Models.Pet> GetAll()
        {
-           return _pets;
+           using IDbConnection database = new SqlConnection(databaseConnectionString);
+           
+           _pets = database.Query<Models.Pet>("Select * From PetStore.Pet").ToList();
+           _petsDaoCategory = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Category as c On c.categoryGuid = p.categoryGuid_fk").ToList();
+           _petsDaoTags = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Tag as t On t.tagGuid = p.tagGuid_fk").ToList();
+         
+           AddCategory();
+
+           AddTags();
+        
+         return _pets;
        }
 
-    public Models.Pet SetPet(Models.Pet pet)
+    private void AddTags()
+    {
+        using IDbConnection database = new SqlConnection(databaseConnectionString);
+
+        _petsDaoTags.ForEach(t =>
+        {
+            const string sqlForTag = "Select * From PetStore.Tag Where tagGuid = @tagGuid";
+            var tag = database.QuerySingle<Tag>(sqlForTag, new {tagGuid = t.TagGuid});
+            _pets.ForEach(v =>
+            {
+                if (!v.Guid.Equals(t.Guid)) return;
+                v.Tags = new List<Tag>()
+                {
+                    new Tag()
+                    {
+                        TagGuid = tag.TagGuid,
+                        TagName = tag.TagName
+                    }
+                };
+            });
+        });
+    }
+    
+    private void AddCategory()
+    {
+        using IDbConnection database = new SqlConnection(databaseConnectionString);
+
+        _petsDaoCategory.ForEach(p =>
+        {
+            const string sqlForCategory = "Select * From PetStore.Category Where categoryGuid = @guid";
+            var category = database.QuerySingle<Category>(sqlForCategory, new {guid = p.CategoryGuid});
+            _pets.ForEach(v =>
+            {
+                if (!v.Guid.Equals(p.Guid)) return;
+                v.Category = category;
+            });
+        });
+    }
+
+    public Models.Pet SetPet(Models.Pet pet) 
         {
             _pets.Add(pet);
             return pet;
@@ -110,7 +135,7 @@ namespace PetStore.Domain
             {
                 p.Tags.ForEach(t =>
                 {
-                    if (t.Name == tag)
+                    if (t.TagName == tag)
                     {
                         tags.Add(t);
                     }
@@ -122,12 +147,12 @@ namespace PetStore.Domain
 
         public List<Models.Pet> GetPets(string? status)
         {
-            return status == null ? _pets : GetPetByStatus(status);
+            return status == null ? GetAll() : GetPetByStatus(status);
         }
         
         public List<Models.Pet> GetPetsByTag(string? tag)
         {
-            return tag == null ? _pets : GetPetByTag(tag);
+            return tag == null ? GetAll() : GetPetByTag(tag);
         }
 
         public Models.Pet DeletePet(Models.Pet pet)

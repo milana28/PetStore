@@ -5,18 +5,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Dapper" Version="2.0.35" />
       <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.2.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.0-preview.6.20312.4" />
       <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.0" />
+      <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="wwwroot" />
       <Folder Include="wwwroot\images" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Include="wwwroot\images\tree.jpg" />
     </ItemGroup>
 
 

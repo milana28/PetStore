@@ -26,6 +26,7 @@ namespace PetStore
             services.AddSingleton<IInventory, Inventory>();
             services.AddSingleton<IUser, User>();
             services.AddSwaggerGen();
+            services.AddMemoryCache();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

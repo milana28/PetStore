@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PetStore.Domain;
 using PetStore.Models;
+using Pet = PetStore.Models.Pet;
 
 namespace PetStore.Controllers
 {
@@ -20,21 +22,21 @@ namespace PetStore.Controllers
 
         private readonly IPet _pet;
         private readonly ILogger<PetController> _logger;
-
-        public PetController(IPet pet, ILogger<PetController> logger)
+        private readonly IMemoryCache _cache;
+       
+        public PetController(IPet pet, ILogger<PetController> logger, IMemoryCache cache)
         {
             _pet = pet;
             _logger = logger;
+            _cache = cache;
         }
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status405MethodNotAllowed)]
-        public async Task<ActionResult<Models.Pet>> AddPet([FromForm] Models.Pet pet)
+        public ActionResult<Models.Pet> AddPet([FromForm] Models.Pet pet)
         {
-          
-           
             return _pet.SetPet(pet);
         }
         
@@ -43,6 +45,15 @@ namespace PetStore.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public ActionResult<List<Models.Pet>> GetPets([FromQuery(Name = "status")] string? status, [FromQuery(Name = "tags")]string? tag)
         {
+            if (!_cache.TryGetValue("ListOfPets", out List<Models.Pet> pets))
+            {
+                _cache.Set("ListOfPets", pets, TimeSpan.FromSeconds(5));
+            }
+            else
+            {
+                return NoContent();
+            }
+
             if (tag != null)
             {
                 return _pet.GetPetsByTag(tag);
@@ -54,7 +65,6 @@ namespace PetStore.Controllers
             }
 
             return _pet.GetPets(status);
-
         }
 
         [HttpGet("{guid}")]
