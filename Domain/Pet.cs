@@ -31,74 +31,84 @@ namespace PetStore.Domain
         private List<PetDAO> _petsDaoCategory = new List<PetDAO>();
         private List<PetDAO> _petsDaoTags = new List<PetDAO>();
         private readonly string databaseConnectionString = "Server=localhost;Database=petstore;User Id=sa;Password=yourStrong(!)Password;";
-    
-    public List<Models.Pet> GetAll()
-       {
-           using IDbConnection database = new SqlConnection(databaseConnectionString);
-           
-           _pets = database.Query<Models.Pet>("Select * From PetStore.Pet").ToList();
-           _petsDaoCategory = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Category as c On c.categoryGuid = p.categoryGuid_fk").ToList();
-           _petsDaoTags = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Tag as t On t.tagGuid = p.tagGuid_fk").ToList();
-         
-           AddCategory();
 
-           AddTags();
-        
-         return _pets;
+        private void GetConnectionWithPetTable()
+        {
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+           
+            _pets = database.Query<Models.Pet>("Select * From PetStore.Pet").ToList();
+            _petsDaoCategory = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Category as c On c.categoryGuid = p.categoryGuid_fk").ToList();
+            _petsDaoTags = database.Query<PetDAO>("Select * From PetStore.Pet as p Join PetStore.Tag as t On t.tagGuid = p.tagGuid_fk").ToList();
+         
+            AddCategory();
+
+            AddTags();
+        }
+
+        public List<Models.Pet> GetAll()
+       {
+           GetConnectionWithPetTable();
+           return _pets;
        }
 
-    private void AddTags()
-    {
-        using IDbConnection database = new SqlConnection(databaseConnectionString);
-
-        _petsDaoTags.ForEach(t =>
+        private void AddTags()
         {
-            const string sqlForTag = "Select * From PetStore.Tag Where tagGuid = @tagGuid";
-            var tag = database.QuerySingle<Tag>(sqlForTag, new {tagGuid = t.TagGuid});
-            _pets.ForEach(v =>
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+
+            _petsDaoTags.ForEach(t =>
             {
-                if (!v.Guid.Equals(t.Guid)) return;
-                v.Tags = new List<Tag>()
+                const string sqlForTag = "Select * From PetStore.Tag Where tagGuid = @tagGuid";
+                var tag = database.QuerySingle<Tag>(sqlForTag, new {tagGuid = t.TagGuid});
+                _pets.ForEach(v =>
                 {
-                    new Tag()
+                    if (!v.Guid.Equals(t.Guid)) return;
+                    v.Tags = new List<Tag>()
                     {
-                        TagGuid = tag.TagGuid,
-                        TagName = tag.TagName
-                    }
-                };
+                        new Tag()
+                        {
+                            TagGuid = tag.TagGuid,
+                            TagName = tag.TagName
+                        }
+                    };
+                });
             });
-        });
-    }
-    
-    private void AddCategory()
-    {
-        using IDbConnection database = new SqlConnection(databaseConnectionString);
-
-        _petsDaoCategory.ForEach(p =>
+        }
+            
+        private void AddCategory()
         {
-            const string sqlForCategory = "Select * From PetStore.Category Where categoryGuid = @guid";
-            var category = database.QuerySingle<Category>(sqlForCategory, new {guid = p.CategoryGuid});
-            _pets.ForEach(v =>
-            {
-                if (!v.Guid.Equals(p.Guid)) return;
-                v.Category = category;
-            });
-        });
-    }
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
 
-    public Models.Pet SetPet(Models.Pet pet) 
+            _petsDaoCategory.ForEach(p =>
+            {
+                const string sqlForCategory = "Select * From PetStore.Category Where categoryGuid = @guid";
+                var category = database.QuerySingle<Category>(sqlForCategory, new {guid = p.CategoryGuid});
+                _pets.ForEach(v =>
+                {
+                    if (!v.Guid.Equals(p.Guid)) return;
+                    v.Category = category;
+                });
+            });
+        }
+
+        public Models.Pet SetPet(Models.Pet pet) 
         {
             _pets.Add(pet);
             return pet;
         }
 
         public Models.Pet GetPetByGuid(Guid guid)
-        {
-            return _pets.Find(pet => pet.Guid == guid);
+        { 
+            GetConnectionWithPetTable();
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string sql = "Select * From PetStore.Pet Where guid = @guid";
+            var pet = database.QuerySingle<Models.Pet>(sql, new {guid = guid});
+           
+            return _pets.Find(p => p.Guid.Equals(pet.Guid));
         }
         
         private List<Models.Pet> GetPetByStatus(string status)
         {
+            GetConnectionWithPetTable();
             return status switch
             {
                 "available" => _pets.FindAll(p => p.Status == PetStatuses.Available),
@@ -110,6 +120,7 @@ namespace PetStore.Domain
 
         private List<Models.Pet> GetPetByTag(string tag)
         {
+            GetConnectionWithPetTable();
             IEnumerable<string> splittedTags = tag.Split(",");
             List<Models.Pet> petList = new List<Models.Pet>();
 
