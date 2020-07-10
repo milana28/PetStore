@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Dapper;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 using Microsoft.EntityFrameworkCore;
 using PetStore.Models;
 
@@ -120,19 +121,22 @@ namespace PetStore.Domain
 
         private List<Models.Pet> GetPetByTag(string tag)
         {
-            GetConnectionWithPetTable();
+           
             IEnumerable<string> splittedTags = tag.Split(",");
             List<Models.Pet> petList = new List<Models.Pet>();
+            GetConnectionWithPetTable();
+            AddCategory();
+            AddTags();
 
             if (splittedTags.Count() == 1)
             {
-                GetTags(tag).ForEach(t =>  petList.Add(_pets.Find(p => p.Tags.Contains(t))));
+                GetPetListByTags(tag, petList);
             }
             else
             {
                 foreach (var splittedTag in splittedTags)
                 {
-                    GetTags(splittedTag).ForEach(t => petList.Add(_pets.Find(p => p.Tags.Contains(t))));
+                    GetPetListByTags(splittedTag, petList);
                 }
             }
 
@@ -141,19 +145,28 @@ namespace PetStore.Domain
 
         private List<Tag> GetTags(string tag)
         {
-            List<Tag> tags = new List<Tag>();
-            _pets.ForEach(p =>
+            GetConnectionWithPetTable();
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            
+            const string sql = "Select * From PetStore.Tag where tagName = @tag";
+            var tags = database.Query<Tag>(sql, new {tag = tag}).ToList();
+           
+            return tags;
+        }
+
+        private void GetPetListByTags(string tags, List<Models.Pet> petList)
+        {
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            
+            GetTags(tags).ForEach(t =>
             {
-                p.Tags.ForEach(t =>
+                const string sql = "Select * From PetStore.Pet Where tagGuid_fk = @guid";
+                var pets = database.Query<Models.Pet>(sql, new {guid = t.TagGuid}).ToList();
+                pets.ForEach(v =>
                 {
-                    if (t.TagName == tag)
-                    {
-                        tags.Add(t);
-                    }
+                    petList.Add(_pets.Find(p => v.Guid.Equals(p.Guid)));
                 });
             });
-
-            return tags;
         }
 
         public List<Models.Pet> GetPets(string? status)
