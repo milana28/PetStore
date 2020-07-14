@@ -5,13 +5,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PetStore.Domain;
 using PetStore.Models;
-using Pet = PetStore.Models.Pet;
 
 namespace PetStore.Controllers
 {

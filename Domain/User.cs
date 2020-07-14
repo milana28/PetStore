@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 
 namespace PetStore.Domain
 {

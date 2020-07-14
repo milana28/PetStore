@@ -1,25 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Dapper;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Razor.TagHelpers;
-using Microsoft.EntityFrameworkCore;
 using PetStore.Models;
 
 namespace PetStore.Domain
 {
     public interface IPet
     {
-        Models.Pet SetPet(Models.Pet pet);
-        List<Models.Pet> GetAll();
-        Models.Pet GetPetByGuid(Guid guid);
         List<Models.Pet> GetPets(string? status);
         List<Models.Pet> GetPetsByTag(string? tag);
+        Models.Pet SetPet(Models.Pet pet);
+        Models.Pet GetPetByGuid(Guid guid);
         Models.Pet UpdatePet(Guid guid, Models.Pet pet);
         Models.Pet DeletePet(Guid guid);
         int GetPetStatusInt(string status);
@@ -30,20 +24,10 @@ namespace PetStore.Domain
 
     public class Pet : IPet
     {
-        private List<Models.Pet> _pets = new List<Models.Pet>();
+        private readonly List<Models.Pet> _pets = new List<Models.Pet>();
 
         private readonly string databaseConnectionString =
             "Server=localhost;Database=petstore;User Id=sa;Password=yourStrong(!)Password;";
-
-        public List<Models.Pet> GetAll()
-        {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                var pets = database.Query<PetDAO>("Select * From PetStore.Pet").ToList();
-                pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
-                return _pets;
-            }
-        }
 
         public Models.Pet SetPet(Models.Pet pet)
         {
@@ -62,6 +46,16 @@ namespace PetStore.Domain
             }
         }
 
+        private List<Models.Pet> GetAll()
+        {
+            using (IDbConnection database = new SqlConnection(databaseConnectionString))
+            {
+                var pets = database.Query<PetDAO>("Select * From PetStore.Pet").ToList();
+                pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
+                return _pets;
+            }
+        }
+        
         private Models.Pet TransformDaoToBusinessLogicPet(PetDAO petDao)
         {
             var category = GetCategoryByGuid(petDao.CategoryGuid);
