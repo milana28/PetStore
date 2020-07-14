@@ -152,7 +152,7 @@ namespace PetStore.Controllers
                 return NotFound();
             }
             
-            return _pet.DeletePet(pet);
+            return _pet.DeletePet(pet.Guid);
         }
     }
     

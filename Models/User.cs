@@ -5,7 +5,7 @@ namespace PetStore.Models
 {
     public class User
     {
-        public Guid Guid { get; set; } = Guid.NewGuid();
+        public Guid Guid { get; set; } 
         
         [Required]
         [StringLength(30, ErrorMessage = "Username length can't be more than 30.")]

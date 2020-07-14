@@ -15,30 +15,14 @@ namespace PetStore.Domain
         {
             _pet = pet;
         }
-
-        private List<Models.Pet> GetAvailable()
-        {
-            return _pet.GetAvailablePets();
-        }
-        
-        private List<Models.Pet> GetPending()
-        {
-            return _pet.GetPendingPets();
-        }
-        
-        private List<Models.Pet> GetSold()
-        {
-            return _pet.GetSoldPets();
-        }
-        
         
         public Models.Inventory GetInventory()
         {
             var inventory = new Models.Inventory()
             {
-                Available = GetAvailable().Count,
-                Pending = GetPending().Count,
-                Sold = GetSold().Count,
+                Available = _pet.GetAvailablePetsCount(),
+                Pending = _pet.GetPendingPetsCount(),
+                Sold = _pet.GetSoldPetsCount(),
             };
 
             return inventory;

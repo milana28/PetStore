@@ -5,10 +5,10 @@ namespace PetStore.Models
 {
     public class Tag
     {
-        public Guid TagGuid { get; set; } = Guid.NewGuid();
+        public Guid Guid { get; set; } 
         
         [Required]
         [StringLength(30, ErrorMessage = "Name length can't be more than 30.")]
-        public string TagName { get; set; }
+        public string Name { get; set; }
     }
 }

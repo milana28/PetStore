@@ -7,7 +7,7 @@ namespace PetStore.Models
 {
     public class Pet
     {
-        public Guid Guid { get; set; } = Guid.NewGuid();
+        public Guid Guid { get; set; } 
         public Category Category { get; set; }
         
         [Required]
