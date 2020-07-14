@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using Dapper;
@@ -31,10 +32,45 @@ namespace PetStore.Domain
 
         public Models.Pet SetPet(Models.Pet pet)
         {
-            _pets.Add(pet);
-            return pet;
+            using (DbConnection database = new SqlConnection(databaseConnectionString))
+            {
+                var petDao = new PetDAO()
+                    {
+                        Guid = Guid.NewGuid(),
+                        Name = pet.Name, 
+                        CategoryGuid = pet.Category.Guid,
+                        PetStatus = pet.Status, 
+                        TagGuid = pet.Tags[0].Guid
+                    };
+
+                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null)
+                {
+                    return null;
+                }
+                // const string insertQuery = @"INSERT INTO [PetStore].[Pet]([guid], [name], [categoryGuid], [tagGuid], [petStatus])";
+                const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @tagGuid, @petStatus)";
+                database.Execute(insertQuery, petDao);
+
+                return TransformDaoToBusinessLogicPet(petDao);
+            }
         }
 
+        private Category CheckIfCategoryExist(Guid categoryGuid, Models.Pet pet)
+        {
+            using (IDbConnection database = new SqlConnection(databaseConnectionString))
+            {
+                var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
+                var category = GetCategoryByGuid(categoryGuid);
+                var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
+                
+                if (!categoryList.Any())
+                {
+                    return null;
+                }
+
+                return category;
+            }
+        }
         public Models.Pet GetPetByGuid(Guid guid)
         {
             using (IDbConnection database = new SqlConnection(databaseConnectionString))
@@ -50,7 +86,7 @@ namespace PetStore.Domain
         {
             using (IDbConnection database = new SqlConnection(databaseConnectionString))
             {
-                var pets = database.Query<PetDAO>("Select * From PetStore.Pet").ToList();
+                var pets = database.Query<PetDAO>("SELECT * FROM PetStore.Pet").ToList();
                 pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
                 return _pets;
             }
@@ -173,12 +209,10 @@ namespace PetStore.Domain
         {
             using (IDbConnection database = new SqlConnection(databaseConnectionString))
             {
-                var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
-                var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
                 var tags = database.Query<Tag>("SELECT * FROM PetStore.Tag").ToList();
                 var tagList = tags.Select(el => pet.Tags.Where(t => t.Guid == el.Guid && t.Name == el.Name));
 
-                if (!categoryList.Any() || !tagList.Any())
+                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || !tagList.Any())
                 {
                     return null;
                 }

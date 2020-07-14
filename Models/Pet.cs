@@ -9,7 +9,7 @@ namespace PetStore.Models
         public Guid Guid { get; set; } 
         public Category Category { get; set; }
         
-        [Required]
+        // [Required]
         public string Name { get; set; }
         
         [Required]

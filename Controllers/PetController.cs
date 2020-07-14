@@ -32,7 +32,7 @@ namespace PetStore.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status405MethodNotAllowed)]
-        public ActionResult<Models.Pet> AddPet([FromForm] Models.Pet pet)
+        public ActionResult<Models.Pet> AddPet(Models.Pet pet)
         {
             return _pet.SetPet(pet);
         }
