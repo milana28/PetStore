@@ -12,8 +12,6 @@ namespace PetStore.Models
         public Guid CategoryGuid { get; set; }
 
         public PetStatuses PetStatus { get; set; }
-        
-        public Guid TagGuid { get; set; }
     }
 }
 

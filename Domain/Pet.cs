@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
+using System.Net;
 using Dapper;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PetStore.Models;
@@ -41,81 +44,84 @@ namespace PetStore.Domain
                         Guid = Guid.NewGuid(),
                         Name = pet.Name, 
                         CategoryGuid = pet.Category.Guid,
-                        PetStatus = pet.Status, 
-                        TagGuid = pet.Tags[0].Guid
+                        PetStatus = pet.Status,
                     };
-
-                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || CheckIfTagExist(pet.Tags[0].Guid, pet) == null)
-                {
-                    return null;
-                }
+                    
+                    var tags = CreateTags(pet.Tags, petDao.Guid);
+                    if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || tags == null)
+                    {
+                        return null;
+                    }
                 
-                // const string insertQuery = @"INSERT INTO [PetStore].[Pet]([guid], [name], [categoryGuid], [tagGuid], [petStatus])";
-                const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @tagGuid, @petStatus)";
-                database.Execute(insertQuery, petDao);
-
-                return TransformDaoToBusinessLogicPet(petDao);
+                    const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @petStatus)";
+                    database.Execute(insertQuery, petDao);
+                
+                    const string addTagsQuery =
+                        "SELECT t.name, t.guid FROM PetStore.Pet_tags as pt LEFT JOIN PetStore.Tag as t ON t.guid = pt.tag_guid WHERE pt.pet_guid = @guid";
+                   
+                    var newPet = TransformDaoToBusinessLogicPet(petDao);
+                    newPet.Tags = tags;
+                    
+                    return newPet;
             }
+        }
+
+        private List<Tag> CreateTags(List<Tag> tags, Guid petGuid)
+        {
+            var tagsList = new List<Tag>();
+
+            foreach (var tag in tags)
+            {
+                var sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid AND name = @name";
+                using IDbConnection database = new SqlConnection(databaseConnectionString);
+                var t = database.QueryFirst<Tag>(sql, new { guid = tag.Guid, name = tag.Name});
+               
+                if (t != null)
+                {
+                    const string insertQuery = "INSERT INTO PetStore.Pet_tags VALUES (@pet_guid, @tag_guid)";
+                    database.Execute(insertQuery, new
+                    {
+                        pet_guid = petGuid,
+                        tag_guid = tag.Guid
+                    });
+
+                    tagsList.Add(t);
+                }
+            }
+
+            return tagsList;
         }
 
         private Category CheckIfCategoryExist(Guid categoryGuid, Models.Pet pet)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
-                var category = GetCategoryByGuid(categoryGuid);
-                var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
+            var category = GetCategoryByGuid(categoryGuid);
+            var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
                 
-                return !categoryList.Any() ? null : category;
-            }
+            return !categoryList.Any() ? null : category;
         }
 
-        private Tag CheckIfTagExist(Guid tagGuid, Models.Pet pet)
-        {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                var tags = database.Query<Tag>("SELECT * FROM PetStore.Tag").ToList();
-                var tag = GetTagByGuid(tagGuid);
-                // var tagList = tags.Select(el => pet.Tags.Where(t => t.Guid == el.Guid && t.Name == el.Name));
-                var tagList = new List<Tag>();
-                tags.ForEach(t =>
-                {
-                    if (t == pet.Tags[0])
-                    {
-                        tagList.Add(pet.Tags[0]);
-                    }
-                });
-
-                return !tagList.Any() ? null : tag;
-            }
-        }
-        
         public Models.Pet GetPetByGuid(Guid guid)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                const string sql = "SELECT * FROM PetStore.Pet WHERE guid = @guid";
-                var petDao = database.QuerySingle<PetDAO>(sql, new {guid = guid});
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string sql = "SELECT * FROM PetStore.Pet WHERE guid = @guid";
+            var petDao = database.QuerySingle<PetDAO>(sql, new {guid = guid});
 
-                return TransformDaoToBusinessLogicPet(petDao);
-            }
+            return TransformDaoToBusinessLogicPet(petDao);
         }
 
         private List<Models.Pet> GetAll()
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                var pets = database.Query<PetDAO>("SELECT * FROM PetStore.Pet").ToList();
-                pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
-                return _pets;
-            }
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var pets = database.Query<PetDAO>("SELECT * FROM PetStore.Pet").ToList();
+            pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
+            return _pets;
         }
         
         private Models.Pet TransformDaoToBusinessLogicPet(PetDAO petDao)
         {
             var category = GetCategoryByGuid(petDao.CategoryGuid);
-            var tag = GetTagByGuid(petDao.TagGuid);
-            var tags = new List<Tag> {tag};
 
             return new Models.Pet
             {
@@ -123,7 +129,6 @@ namespace PetStore.Domain
                 Name = petDao.Name,
                 Category = category,
                 Status = petDao.PetStatus,
-                Tags = tags
             };
         }
 
@@ -229,20 +234,16 @@ namespace PetStore.Domain
         {
             using (IDbConnection database = new SqlConnection(databaseConnectionString))
             {
-                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || CheckIfTagExist(pet.Tags[0].Guid, pet) == null)
+                var tags = CreateTags(pet.Tags, guid);
+                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || tags == null)
                 {
                     return null;
                 }
 
                 const string sql =
-                    "UPDATE PetStore.Pet SET name = @name, petStatus = @status, categoryGuid = @categooryGuid, tagGuid = @tagGuid WHERE guid = @guid";
-                // tags.ForEach(el => database.ExecuteScalar<PetDAO>(sql,
-                //     new
-                //     {
-                //         name = pet.Name, guid = pet.Guid, status = pet.Status, categooryGuid = pet.Category.Guid,
-                //         tagGuid = el.Guid
-                //     }));
-
+                    "UPDATE PetStore.Pet SET name = @name, categoryGuid = @categoryGuid, petStatus = @status WHERE guid = @petGuid";
+                database.Execute(sql, new {name = pet.Name, categoryGuid = pet.Category.Guid, status = pet.Status, petGuid = guid});
+                
                 return pet;
             }
         }
