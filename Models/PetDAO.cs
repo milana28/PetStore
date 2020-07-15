@@ -9,8 +9,8 @@ namespace PetStore.Models
         
         [Required]
         public string Name { get; set; }
+        
         public Guid CategoryGuid { get; set; }
-
         public PetStatuses PetStatus { get; set; }
     }
 }
