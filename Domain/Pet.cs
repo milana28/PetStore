@@ -90,8 +90,7 @@ namespace PetStore.Domain
         private List<Tag> GetTagsForPet(Guid petGuid)
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString); 
-            const string petTags =
-                    "SELECT * FROM PetStore.Pet_tags WHERE pet_guid = @pet_guid";
+            const string petTags = "SELECT * FROM PetStore.Pet_tags WHERE pet_guid = @pet_guid";
                 
             var petTagsList =  database.Query<Pet_TagsDAO>(petTags, new {pet_guid = petGuid}).ToList();
 
@@ -153,42 +152,36 @@ namespace PetStore.Domain
 
         private Tag GetTagByGuid(Guid guid)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                const string sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid";
-                return database.QuerySingle<Tag>(sql, new {guid = guid});
-            }
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid";
+            return database.QuerySingle<Tag>(sql, new {guid = guid});
         }
 
         private List<Tag> GetTagByName(string tag)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                const string sql = "SELECT * FROM PetStore.Tag WHERE name = @name";
-                return database.Query<Tag>(sql, new {name = tag}).ToList();
-            }
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string sql = "SELECT * FROM PetStore.Tag WHERE name = @name";
+            return database.Query<Tag>(sql, new {name = tag}).ToList();
         }
 
         private List<Models.Pet> GetPetByStatus(string status)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                int statusInt = GetPetStatusInt(status);
-                const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
-                var pets = database.Query<PetDAO>(sql, new {status = statusInt}).ToList();
-                var petsByStatus = new List<Models.Pet>();
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var statusInt = GetPetStatusInt(status);
+            const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
+            var pets = database.Query<PetDAO>(sql, new {status = statusInt}).ToList();
+            var petsByStatus = new List<Models.Pet>();
 
-                pets.ForEach(p => { petsByStatus.Add(TransformDaoToBusinessLogicPet(p)); });
+            pets.ForEach(p => { petsByStatus.Add(TransformDaoToBusinessLogicPet(p)); });
 
-                return petsByStatus;
-            }
+            return petsByStatus;
         }
 
         private List<Models.Pet> GetPetsByListOfTags(string tag)
         {
 
             IEnumerable<string> splittedTags = tag.Split(",");
-            List<Models.Pet> petList = new List<Models.Pet>();
+            var petList = new List<Models.Pet>();
 
             if (splittedTags.Count() == 1)
             {
@@ -235,32 +228,28 @@ namespace PetStore.Domain
 
         public Models.Pet DeletePet(Guid guid)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
-            {
-                var petToDelete = GetPetByGuid(guid);
-                const string sql = "DELETE FROM PetStore.Pet WHERE guid = @guid";
-                database.ExecuteScalar<PetDAO>(sql, new {guid = guid});
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var petToDelete = GetPetByGuid(guid);
+            const string sql = "DELETE FROM PetStore.Pet WHERE guid = @guid";
+            database.ExecuteScalar<PetDAO>(sql, new {guid = guid});
 
-                return petToDelete;
-            }
+            return petToDelete;
         }
 
         public Models.Pet UpdatePet(Guid guid, Models.Pet pet)
         {
-            using (IDbConnection database = new SqlConnection(databaseConnectionString))
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var tags = CreateTags(pet.Tags, guid);
+            if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || tags == null)
             {
-                var tags = CreateTags(pet.Tags, guid);
-                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null || tags == null)
-                {
-                    return null;
-                }
-
-                const string sql =
-                    "UPDATE PetStore.Pet SET name = @name, categoryGuid = @categoryGuid, petStatus = @status WHERE guid = @petGuid";
-                database.Execute(sql, new {name = pet.Name, categoryGuid = pet.Category.Guid, status = pet.Status, petGuid = guid});
-                
-                return pet;
+                return null;
             }
+
+            const string sql =
+                "UPDATE PetStore.Pet SET name = @name, categoryGuid = @categoryGuid, petStatus = @status WHERE guid = @petGuid";
+            database.Execute(sql, new {name = pet.Name, categoryGuid = pet.Category.Guid, status = pet.Status, petGuid = guid});
+                
+            return pet;
         }
 
         public int GetPetStatusInt(string status)
