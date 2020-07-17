@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -111,30 +109,9 @@ namespace PetStore.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UploadPetImage(Guid guid, List<IFormFile> files)
+        public Task<Models.Pet> UploadPetImage(Guid guid, List<IFormFile> files)
         {
-            var size = files.Sum(f => f.Length);
-            var pet = _pet.GetPetByGuid(guid);
-        
-            foreach (var formFile in files)
-            {
-                var fileName = Path.GetRandomFileName();
-                fileName = Path.ChangeExtension(fileName, ".jpg");
-                var filePath = Path.Combine("wwwroot/images", fileName);
-
-                if (formFile.Length <= 0) continue;
-                await using (var stream = System.IO.File.Create(filePath))
-                {
-                    await formFile.CopyToAsync(stream);
-                }
-                pet.PhotoUrls = new List<string>()
-                {
-                    new string(fileName)
-                };
-                _pet.UpdatePet(guid, pet);
-            }
-           
-            return Ok(new {count = files.Count, size});
+            return _pet.UploadPetImage(guid, files);
         }
 
         [HttpDelete("{guid}")]

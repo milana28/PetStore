@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Dapper;
+using Microsoft.AspNetCore.Http;
 using PetStore.Models;
 
 namespace PetStore.Domain
@@ -21,6 +24,7 @@ namespace PetStore.Domain
         int GetAvailablePetsCount();
         int GetPendingPetsCount();
         int GetSoldPetsCount();
+        Task<Models.Pet> UploadPetImage(Guid petGuid, List<IFormFile> files);
     }
 
     public class Pet : IPet
@@ -35,44 +39,44 @@ namespace PetStore.Domain
             using (DbConnection database = new SqlConnection(databaseConnectionString))
             {
                 var petDao = new PetDAO()
-                    {
-                        Guid = Guid.NewGuid(),
-                        Name = pet.Name, 
-                        CategoryGuid = pet.Category.Guid,
-                        PetStatus = pet.Status,
-                    };
-                    
-                  
-                    if (CheckIfCategoryExist(pet.Category.Guid, pet) == null)
-                    {
-                        return null;
-                    }
-                
-                    const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @petStatus)";
-                    database.Execute(insertQuery, petDao);
-                    var newPet = TransformDaoToBusinessLogicPet(petDao);
-                    var tags = CreateTags(pet.Tags, petDao.Guid);
+                {
+                    Guid = Guid.NewGuid(),
+                    Name = pet.Name,
+                    CategoryGuid = pet.Category.Guid,
+                    PetStatus = pet.Status,
+                };
 
-                    if (tags == null)
-                    {
-                        return null;
-                    }
-                    
-                    newPet.Tags = tags;
-                    
-                    return newPet;
+
+                if (CheckIfCategoryExist(pet.Category.Guid, pet) == null)
+                {
+                    return null;
+                }
+
+                const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @petStatus)";
+                database.Execute(insertQuery, petDao);
+                var newPet = TransformDaoToBusinessLogicPet(petDao);
+                var tags = CreateTags(pet.Tags, petDao.Guid);
+
+                if (tags == null)
+                {
+                    return null;
+                }
+
+                newPet.Tags = tags;
+
+                return newPet;
             }
         }
 
         private List<Tag> CreateTags(List<Tag> tags, Guid petGuid)
         {
             var tagsList = new List<Tag>();
-           
+
             foreach (var t in tags)
             {
                 using IDbConnection database = new SqlConnection(databaseConnectionString);
                 const string sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid AND name = @name";
-                var tag = database.QueryFirst<Tag>(sql, new { guid = t.Guid, name = t.Name }); 
+                var tag = database.QueryFirst<Tag>(sql, new {guid = t.Guid, name = t.Name});
                 if (tag == null) continue;
                 const string insertQuery = "INSERT INTO PetStore.Pet_tags VALUES (@pet_guid, @tag_guid)";
                 database.Execute(insertQuery, new
@@ -89,12 +93,22 @@ namespace PetStore.Domain
 
         private List<Tag> GetTagsForPet(Guid petGuid)
         {
-            using IDbConnection database = new SqlConnection(databaseConnectionString); 
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string petTags = "SELECT * FROM PetStore.Pet_tags WHERE pet_guid = @pet_guid";
-                
-            var petTagsList =  database.Query<Pet_TagsDAO>(petTags, new {pet_guid = petGuid}).ToList();
+
+            var petTagsList = database.Query<Pet_TagsDAO>(petTags, new {pet_guid = petGuid}).ToList();
 
             return petTagsList.Select(t => GetTagByGuid(t.Tag_guid)).ToList();
+        }
+        
+        private List<PhotosDAO> GetPhotosForPet(Guid petGuid)
+        {
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string petPhotos = "SELECT * FROM PetStore.Photos WHERE pet_guid = @pet_guid";
+
+            var photos = database.Query<PhotosDAO>(petPhotos, new {pet_guid = petGuid}).ToList();
+
+            return photos.Select(p => GetPhotoById(p.Id)).ToList();
         }
 
         private Category CheckIfCategoryExist(Guid categoryGuid, Models.Pet pet)
@@ -103,7 +117,7 @@ namespace PetStore.Domain
             var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
             var category = GetCategoryByGuid(categoryGuid);
             var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
-                
+
             return !categoryList.Any() ? null : category;
         }
 
@@ -121,15 +135,18 @@ namespace PetStore.Domain
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var pets = database.Query<PetDAO>("SELECT * FROM PetStore.Pet").ToList();
             pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
-            
+
             return _pets;
         }
-        
+
         private Models.Pet TransformDaoToBusinessLogicPet(PetDAO petDao)
         {
             var category = GetCategoryByGuid(petDao.CategoryGuid);
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var tags = GetTagsForPet(petDao.Guid);
+            var photos = GetPhotosForPet(petDao.Guid);
+            var photoNames = new List<string>();
+            photos.ForEach(p => photoNames.Add(p.Url));
 
             return new Models.Pet
             {
@@ -137,16 +154,17 @@ namespace PetStore.Domain
                 Name = petDao.Name,
                 Category = category,
                 Status = petDao.PetStatus,
-                Tags = tags
+                Tags = tags,
+                PhotoUrls = photoNames,
             };
-            
+
         }
 
         private Category GetCategoryByGuid(Guid guid)
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Category WHERE guid = @guid";
-            
+
             return database.QueryFirst<Category>(sql, new {guid = guid});
         }
 
@@ -154,13 +172,23 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid";
+            
             return database.QuerySingle<Tag>(sql, new {guid = guid});
+        }
+        
+        private PhotosDAO GetPhotoById(int id)
+        {
+            using IDbConnection database = new SqlConnection(databaseConnectionString);
+            const string sql = "SELECT * FROM PetStore.Photos WHERE id = @id";
+            
+            return database.QuerySingle<PhotosDAO>(sql, new {id = id});
         }
 
         private List<Tag> GetTagByName(string tag)
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Tag WHERE name = @name";
+            
             return database.Query<Tag>(sql, new {name = tag}).ToList();
         }
 
@@ -203,7 +231,7 @@ namespace PetStore.Domain
             GetTagByName(tags).ForEach(t =>
             {
                 using IDbConnection database = new SqlConnection(databaseConnectionString);
-                const string sql = 
+                const string sql =
                     "SELECT * FROM PetStore.Pet_tags WHERE tag_guid = @guid";
                 var petGuidList = database.Query<Pet_TagsDAO>(sql, new {guid = t.Guid}).ToList();
 
@@ -247,8 +275,9 @@ namespace PetStore.Domain
 
             const string sql =
                 "UPDATE PetStore.Pet SET name = @name, categoryGuid = @categoryGuid, petStatus = @status WHERE guid = @petGuid";
-            database.Execute(sql, new {name = pet.Name, categoryGuid = pet.Category.Guid, status = pet.Status, petGuid = guid});
-                
+            database.Execute(sql,
+                new {name = pet.Name, categoryGuid = pet.Category.Guid, status = pet.Status, petGuid = guid});
+
             return pet;
         }
 
@@ -288,6 +317,37 @@ namespace PetStore.Domain
             var soldPets = database.Query<PetDAO>(sql, new {status = PetStatuses.Sold}).ToList();
 
             return soldPets.Count;
+        }
+
+        public async Task<Models.Pet> UploadPetImage(Guid petGuid, List<IFormFile> files)
+        {
+            var pet = GetPetByGuid(petGuid);
+
+            foreach (var formFile in files)
+            {
+                var fileName = Path.GetRandomFileName();
+                fileName = Path.ChangeExtension(fileName, ".jpg");
+                var filePath = Path.Combine("wwwroot/images", fileName);
+
+                if (formFile.Length <= 0) continue;
+                await using (var stream = System.IO.File.Create(filePath))
+                {
+                    await formFile.CopyToAsync(stream);
+                }
+
+                var photoForPet = new PhotosDAO()
+                {
+                    Pet_guid = petGuid,
+                    Url = fileName
+                };
+                using IDbConnection database = new SqlConnection(databaseConnectionString);
+                const string insertIntoPhotos = "INSERT INTO Petstore.Photos VALUES (@pet_guid, @url)";
+                await database.ExecuteAsync(insertIntoPhotos, photoForPet);
+                
+                pet.PhotoUrls.Add(fileName);
+            }
+
+            return pet;
         }
     }
 }
