@@ -53,6 +53,7 @@ namespace PetStore.Domain
                 }
 
                 const string insertQuery = "INSERT INTO PetStore.Pet VALUES (@guid, @name, @categoryGuid, @petStatus)";
+                
                 database.Execute(insertQuery, petDao);
                 var newPet = TransformDaoToBusinessLogicPet(petDao);
                 var tags = CreateTags(pet.Tags, petDao.Guid);
@@ -76,9 +77,12 @@ namespace PetStore.Domain
             {
                 using IDbConnection database = new SqlConnection(databaseConnectionString);
                 const string sql = "SELECT * FROM PetStore.Tag WHERE guid = @guid AND name = @name";
+                
                 var tag = database.QueryFirst<Tag>(sql, new {guid = t.Guid, name = t.Name});
+                
                 if (tag == null) continue;
                 const string insertQuery = "INSERT INTO PetStore.Pet_tags VALUES (@pet_guid, @tag_guid)";
+                
                 database.Execute(insertQuery, new
                 {
                     pet_guid = petGuid,
@@ -115,6 +119,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var categories = database.Query<Category>("SELECT * FROM PetStore.Category").ToList();
+            
             var category = GetCategoryByGuid(categoryGuid);
             var categoryList = categories.Where(c => c.Name == pet.Category.Name && c.Guid == pet.Category.Guid);
 
@@ -125,6 +130,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Pet WHERE guid = @guid";
+            
             var petDao = database.QuerySingle<PetDAO>(sql, new {guid = guid});
 
             return TransformDaoToBusinessLogicPet(petDao);
@@ -134,6 +140,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var pets = database.Query<PetDAO>("SELECT * FROM PetStore.Pet").ToList();
+            
             pets.ForEach(p => _pets.Add(TransformDaoToBusinessLogicPet(p)));
 
             return _pets;
@@ -141,11 +148,12 @@ namespace PetStore.Domain
 
         private Models.Pet TransformDaoToBusinessLogicPet(PetDAO petDao)
         {
-            var category = GetCategoryByGuid(petDao.CategoryGuid);
             using IDbConnection database = new SqlConnection(databaseConnectionString);
+            var category = GetCategoryByGuid(petDao.CategoryGuid);
             var tags = GetTagsForPet(petDao.Guid);
             var photos = GetPhotosForPet(petDao.Guid);
             var photoNames = new List<string>();
+            
             photos.ForEach(p => photoNames.Add(p.Url));
 
             return new Models.Pet
@@ -196,10 +204,11 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var statusInt = GetPetStatusInt(status);
-            const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
-            var pets = database.Query<PetDAO>(sql, new {status = statusInt}).ToList();
             var petsByStatus = new List<Models.Pet>();
-
+            const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
+            
+            var pets = database.Query<PetDAO>(sql, new {status = statusInt}).ToList();
+            
             pets.ForEach(p => { petsByStatus.Add(TransformDaoToBusinessLogicPet(p)); });
 
             return petsByStatus;
@@ -239,6 +248,7 @@ namespace PetStore.Domain
                 {
                     const string pet = "SELECT * FROM PetStore.Pet WHERE guid = @guid";
                     var pets = database.Query<PetDAO>(pet, new {guid = p.Pet_guid}).ToList();
+                    
                     pets.ForEach(v => petList.Add(TransformDaoToBusinessLogicPet(v)));
                 }
             });
@@ -259,6 +269,7 @@ namespace PetStore.Domain
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             var petToDelete = GetPetByGuid(guid);
             const string sql = "DELETE FROM PetStore.Pet WHERE guid = @guid";
+            
             database.ExecuteScalar<PetDAO>(sql, new {guid = guid});
 
             return petToDelete;
@@ -296,6 +307,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
+            
             var availablePets = database.Query<PetDAO>(sql, new {status = PetStatuses.Available}).ToList();
 
             return availablePets.Count;
@@ -305,6 +317,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
+            
             var pendingPets = database.Query<PetDAO>(sql, new {status = PetStatuses.Pending}).ToList();
 
             return pendingPets.Count;
@@ -314,6 +327,7 @@ namespace PetStore.Domain
         {
             using IDbConnection database = new SqlConnection(databaseConnectionString);
             const string sql = "SELECT * FROM PetStore.Pet WHERE petStatus = @status";
+            
             var soldPets = database.Query<PetDAO>(sql, new {status = PetStatuses.Sold}).ToList();
 
             return soldPets.Count;
@@ -342,6 +356,7 @@ namespace PetStore.Domain
                 };
                 using IDbConnection database = new SqlConnection(databaseConnectionString);
                 const string insertIntoPhotos = "INSERT INTO Petstore.Photos VALUES (@pet_guid, @url)";
+                
                 await database.ExecuteAsync(insertIntoPhotos, photoForPet);
                 
                 pet.PhotoUrls.Add(fileName);
